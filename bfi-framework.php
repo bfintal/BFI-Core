@@ -4,7 +4,7 @@ Plugin Name: Gambit Framework
 Plugin URI: http://wordpress.org/plugins/hello-dolly/
 Description: The BFI / Gambit Framework. This is used as the foundation for all Gambit WordPress themes and contains all of the fundamental functions and classes used throughout the theme. Activating this for other themes will do nothing.
 Author: Benjamin Intal
-Version: 2.2
+Version: 2.3
 Author URI: http://gambit.ph/
 */
 
