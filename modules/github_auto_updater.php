@@ -138,6 +138,8 @@ class BFIGitHubPluginUpdater {
     public function postInstall( $true, $hook_extra, $result ) {
         global $wp_filesystem;
 
+        var_dump($result);
+        var_dump($this->slug);
         $pluginFolder = WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . dirname( $this->slug );
         $wp_filesystem->move( $result['destination'], $pluginFolder );
         $result['destination'] = $pluginFolder;
