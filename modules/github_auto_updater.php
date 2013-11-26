@@ -1,0 +1,136 @@
+<?php
+
+class BFIGitHubPluginUpdater {
+    private $slug;
+    private $pluginData;
+    private $username;
+    private $repo;
+    private $pluginFile;
+    private $githubAPIResult;
+    private $accessToken;
+
+    function __construct( $pluginFile, $gitHubUsername, $gitHubProjectName, $accessToken = '' ) {
+        add_filter( "pre_set_site_transient_update_plugins", array( $this, "setTransitent" ) );
+        add_filter( "plugins_api", array( $this, "setPluginInfo" ), 10, 3 );
+
+        $this->pluginFile = $pluginFile;
+        $this->username = $gitHubUsername;
+        $this->repo = $gitHubProjectName;
+        $this->accessToken = $accessToken;
+    }
+
+    private function initPluginData() {
+        $this->slug = plugin_basename( $this->pluginFile );
+        $this->pluginData = get_plugin_data( $this->pluginFile );
+    }
+
+    private function getRepoReleaseInfo() {
+        if ( !empty( $this->githubAPIResult ) ) {
+            return;
+        }
+
+        $url = "https://api.github.com/repos/{$this->username}/{$this->repo}/releases";
+        // implement OAuth2 is necessary
+        if ( !empty( $this->accessToken ) ) {
+            $url = add_query_arg( array( "access_token" => $this->accessToken ), $url );
+        }
+        $this->githubAPIResult = wp_remote_retrieve_body( wp_remote_get( $url ) );
+
+        if ( !empty( $this->githubAPIResult ) ) {
+            $this->githubAPIResult = @json_decode( $this->githubAPIResult );
+        }
+
+        // Use only the latest release
+        if ( is_array( $this->githubAPIResult ) ) {
+            $this->githubAPIResult = $this->githubAPIResult[0];
+        }
+    }
+
+    public function setTransitent( $transient ) {
+        if ( empty( $transient->checked ) ) {
+            return $transient;
+        }
+
+        $this->initPluginData();
+        $this->getRepoReleaseInfo();
+
+        $doUpdate = version_compare( $this->githubAPIResult->tag_name, $transient->checked[$this->slug] );
+
+        // Update the transient to include our updated plugin
+        if ( $doUpdate == 1 ) {
+            $package = $this->githubAPIResult->tarball_url;
+            // implement OAuth2 is necessary
+            if ( !empty( $this->accessToken ) ) {
+                $package = add_query_arg( array( "access_token" => $this->accessToken ), $package );
+            }
+
+            $obj = new stdClass();
+            $obj->slug = $this->slug;
+            $obj->new_version = $this->githubAPIResult->tag_name;
+            $obj->url = $this->pluginData["PluginURI"];
+            $obj->package = $package;
+            $transient->response[$this->slug] = $obj;
+        }
+
+        return $transient;
+    }
+
+    public function setPluginInfo( $false, $action, $response ) {
+        $this->initPluginData();
+        $this->getRepoReleaseInfo();
+
+        require_once( plugin_dir_path( __FILE__ ) . "../includes/Parsedown.php" );
+
+        if ( empty( $response->slug ) || $response->slug != $this->slug ) {
+            return false;
+        }
+
+        $response->last_updated = $this->githubAPIResult->published_at;
+        $response->slug = $this->slug;
+        $response->plugin_name  = $this->pluginData["Name"];
+        $response->version = $this->githubAPIResult->tag_name;
+        $response->author = $this->pluginData["AuthorName"];
+        $response->homepage = $this->pluginData["PluginURI"];
+
+        $downloadLink = $this->githubAPIResult->tarball_url;
+        // implement OAuth2 is necessary
+        if ( !empty( $this->accessToken ) ) {
+            $downloadLink = add_query_arg(
+                array( "access_token" => $this->accessToken ),
+                $downloadLink
+            );
+        }
+        $response->download_link = $downloadLink;
+
+        $response->sections = array(
+            'description' => $this->pluginData["Description"],
+            'changelog' => class_exists( "Parsedown" )
+                ? Parsedown::instance()->parse( $this->githubAPIResult->body )
+                : $this->githubAPIResult->body
+        );
+
+        // Gets the required version of WP
+        $matches = null;
+        preg_match( "/requires:\s([\d\.]+)/i", $this->githubAPIResult->body, $matches );
+        if ( !empty( $matches ) ) {
+            if ( is_array( $matches ) ) {
+                if ( count( $matches ) > 1 ) {
+                    $response->requires = $matches[1];
+                }
+            }
+        }
+
+        // Gets the tested version of WP
+        $matches = null;
+        preg_match( "/tested:\s([\d\.]+)/i", $this->githubAPIResult->body, $matches );
+        if ( !empty( $matches ) ) {
+            if ( is_array( $matches ) ) {
+                if ( count( $matches ) > 1 ) {
+                    $response->tested = $matches[1];
+                }
+            }
+        }
+
+        return $response;
+    }
+}
