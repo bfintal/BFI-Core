@@ -138,6 +138,10 @@ class BFIGitHubPluginUpdater {
     public function postInstall( $true, $hook_extra, $result ) {
         global $wp_filesystem;
 
+        $this->initPluginData();
+
+        // array(7) { ["source"]=> string(95) "/Users/jami/Workspace/WordPress/wordpress3.7/wp-content/upgrade/2.tmp/bfintal-BFI-Core-c8eda73/" ["source_files"]=> array(5) { [0]=> string(17) "bfi-framework.php" [1]=> string(11) "controllers" [2]=> string(7) "helpers" [3]=> string(8) "includes" [4]=> string(7) "modules" } ["destination"]=> string(89) "/Users/jami/Workspace/WordPress/wordpress3.7/wp-content/plugins/bfintal-BFI-Core-c8eda73/" ["destination_name"]=> string(24) "bfintal-BFI-Core-c8eda73" ["local_destination"]=> string(63) "/Users/jami/Workspace/WordPress/wordpress3.7/wp-content/plugins" ["remote_destination"]=> string(89) "/Users/jami/Workspace/WordPress/wordpress3.7/wp-content/plugins/bfintal-BFI-Core-c8eda73/" ["clear_destination"]=> bool(true) } NULL
+
         var_dump($result);
         var_dump($this->slug);
         $pluginFolder = WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . dirname( $this->slug );
