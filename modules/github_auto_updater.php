@@ -140,14 +140,18 @@ class BFIGitHubPluginUpdater {
 
         $this->initPluginData();
 
-        // array(7) { ["source"]=> string(95) "/Users/jami/Workspace/WordPress/wordpress3.7/wp-content/upgrade/2.tmp/bfintal-BFI-Core-c8eda73/" ["source_files"]=> array(5) { [0]=> string(17) "bfi-framework.php" [1]=> string(11) "controllers" [2]=> string(7) "helpers" [3]=> string(8) "includes" [4]=> string(7) "modules" } ["destination"]=> string(89) "/Users/jami/Workspace/WordPress/wordpress3.7/wp-content/plugins/bfintal-BFI-Core-c8eda73/" ["destination_name"]=> string(24) "bfintal-BFI-Core-c8eda73" ["local_destination"]=> string(63) "/Users/jami/Workspace/WordPress/wordpress3.7/wp-content/plugins" ["remote_destination"]=> string(89) "/Users/jami/Workspace/WordPress/wordpress3.7/wp-content/plugins/bfintal-BFI-Core-c8eda73/" ["clear_destination"]=> bool(true) } NULL
+        $wasActivated = is_plugin_active( $this->slug );
 
-        var_dump($result);
-        var_dump($this->slug);
+        // Since we are hosted in GitHub, our plugin folder would have a dirname of
+        // user-repo-hash change it to our original one:
         $pluginFolder = WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . dirname( $this->slug );
         $wp_filesystem->move( $result['destination'], $pluginFolder );
         $result['destination'] = $pluginFolder;
-        $activate = activate_plugin( $this->slug );
+
+        // Re-activate plugin if needed
+        if ( $wasActivated ) {
+            $activate = activate_plugin( $this->slug );
+        }
 
         return $result;
     }
